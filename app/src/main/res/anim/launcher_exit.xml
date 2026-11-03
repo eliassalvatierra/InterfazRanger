@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- La interfaz se agranda un poco y se desvanece al salir hacia una app. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shareInterpolator="false">
+    <scale
+        android:fromXScale="1.0" android:toXScale="1.06"
+        android:fromYScale="1.0" android:toYScale="1.06"
+        android:pivotX="50%" android:pivotY="50%"
+        android:interpolator="@android:interpolator/accelerate_quad"
+        android:duration="280" />
+    <alpha
+        android:fromAlpha="1.0" android:toAlpha="0.0"
+        android:interpolator="@android:interpolator/accelerate_quad"
+        android:duration="240" />
+</set>

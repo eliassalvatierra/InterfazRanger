@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="android:Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">#101214</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="AppDrawerDialogTheme" parent="android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowAnimationStyle">@style/AppDrawerWindowAnimation</item>
+    </style>
+    <style name="AppDrawerWindowAnimation">
+        <item name="android:activityOpenEnterAnimation">@anim/drawer_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/drawer_exit</item>
+        <item name="android:activityCloseEnterAnimation">@anim/drawer_enter</item>
+        <item name="android:activityCloseExitAnimation">@anim/drawer_exit</item>
+    </style>
+</resources>

@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Ranger Launcher</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#101214;font-family:'Roboto','Barlow',system-ui,sans-serif;color:#e8ecef}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button{touch-action:manipulation;-webkit-touch-callout:none}
+button:active{filter:brightness(1.25)}
+[data-key],[data-dest],[data-act]{transition:transform .18s ease,filter .18s ease}
+.pressing{transform:scale(.93)}
+.ai{width:32px;height:32px;border-radius:9px;object-fit:cover;display:block}
+#gps .btns .ai{width:22px;height:22px;border-radius:6px;display:inline-block;vertical-align:middle;margin-right:6px}
+#cp .ai{width:26px;height:26px;border-radius:8px}
+
+/* transición interfaz <-> app */
+#launchOv{position:absolute;z-index:60;left:0;top:0;width:1280px;height:720px;pointer-events:none;opacity:0;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  background:radial-gradient(900px 600px at 50% 40%,#2a3036 0%,#15181b 70%,#0b0c0e 100%)}
+#launchOv .li{display:flex;flex-direction:column;align-items:center;gap:14px;color:#e8ecef;font-size:22px;font-weight:600;
+  opacity:0;transform:scale(.6);transition:opacity .22s ease .08s,transform .32s cubic-bezier(.2,.8,.2,1) .05s}
+#launchOv .li img,#launchOv .li svg{width:96px;height:96px;border-radius:22px;object-fit:cover}
+#launchOv.go{opacity:1;transition:opacity .12s ease,left .32s cubic-bezier(.4,0,.2,1),top .32s cubic-bezier(.4,0,.2,1),width .32s cubic-bezier(.4,0,.2,1),height .32s cubic-bezier(.4,0,.2,1),border-radius .32s cubic-bezier(.4,0,.2,1)}
+#launchOv.go .li{opacity:1;transform:scale(1)}
+#launchOv.out{opacity:0;transform:scale(1.04);transition:opacity .38s ease,transform .38s ease}
+#launchOv.out .li{opacity:0;transition:opacity .2s ease}
+#stage.back > *:not(#launchOv){animation:backIn .42s cubic-bezier(.2,.8,.2,1)}
+@keyframes backIn{from{transform:scale(.96);opacity:.0}to{transform:scale(1);opacity:1}}
+.num{font-family:'Barlow Condensed','Roboto Condensed','sans-serif-condensed',sans-serif}
+
+#stage{position:absolute;left:50%;top:50%;width:1280px;height:720px;transform:translate(-50%,-50%) scale(1);transform-origin:center center;padding:16px;display:flex;gap:16px;
+  background:radial-gradient(1100px 700px at 35% 15%,#30363c 0%,#1c1f23 55%,#101214 100%)}
+.card{border-radius:28px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(160deg,#2c3238,#1d2125)}
+.sub{color:#aab2b9}
+svg{display:block}
+
+/* barra izquierda */
+#side{width:72px;flex:none;border-radius:28px;background:linear-gradient(180deg,#2a2f35,#1a1d21);border:1px solid rgba(255,255,255,.08);
+  display:flex;flex-direction:column;align-items:center;justify-content:space-around;padding:12px 0}
+.nb{width:60px;height:78px;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:500;color:#c4cbd1}
+.nb.on{background:rgba(255,255,255,.12);color:#fff}
+
+#main{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px}
+#row{flex:1;min-height:0;display:flex;gap:16px}
+#colL{width:340px;flex:none;display:flex;flex-direction:column;gap:16px}
+#colR{width:300px;flex:none;display:flex;flex-direction:column;gap:16px}
+
+/* GPS */
+#gps{flex:1;min-height:0;padding:16px;display:flex;flex-direction:column;gap:12px}
+.hd{display:flex;align-items:center;justify-content:space-between}
+.hd h2{font-size:17px;font-weight:600}
+.chip{font-size:12px;font-weight:500;color:#e8edf1;border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:3px 10px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#gps .btns{display:flex;gap:8px}
+#gps .btns button{flex:1;height:44px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:#2f353b;font-size:14px;font-weight:500}
+
+/* música */
+#music{flex:1;min-height:0;padding:16px;display:flex;flex-direction:column;justify-content:space-between}
+#art{width:72px;height:72px;flex:none;border-radius:16px;background:linear-gradient(145deg,#4a525a,#2a2f35);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#dfe5e9}
+#mTitle{font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#mArtist{font-size:14px;margin-top:2px;line-height:1.25;max-height:36px;overflow:hidden}
+#bar{height:5px;border-radius:999px;background:#3a4047;overflow:hidden}
+#barFill{width:0;height:100%;background:#e3e8ec;border-radius:999px;transition:width .9s linear}
+.times{display:flex;justify-content:space-between;font-size:12px;margin-top:6px}
+.ctl{display:flex;align-items:center;justify-content:center;gap:28px}
+.ctl .sm{width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:#e8edf1}
+#play{width:58px;height:58px;border-radius:999px;background:#e8edf1;color:#1a1d21;display:flex;align-items:center;justify-content:center}
+#needs{display:none;height:38px;border-radius:12px;background:#e8edf1;color:#1a1d21;font-size:14px;font-weight:600;padding:0 14px;align-self:flex-start}
+.hide{display:none}
+
+/* centro */
+#center{flex:1;min-width:0;padding:20px 16px 16px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  background:radial-gradient(420px 280px at 50% 28%,#454c54 0%,#272c31 62%,#1b1e22 100%)}
+#center .top{align-self:stretch;display:flex;align-items:center;justify-content:center;padding:0 6px}
+#center .top h2{font-size:22px;font-weight:600}
+#lightBtn{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;width:270px;padding:0 16px;white-space:nowrap;border-radius:999px;border:1px solid rgba(255,255,255,.22);font-size:14px;font-weight:600;color:#d4dade}
+#stage.lights #lightBtn{background:#f1e6c4;color:#1f1c12}
+#truckWrap{position:relative;width:390px;max-width:100%;display:flex;align-items:center;justify-content:center}
+#truck{position:relative;z-index:1;width:100%;height:auto;display:block}
+.floor{position:absolute;left:6%;right:6%;bottom:-8px;height:26px;background:radial-gradient(ellipse at center,rgba(0,0,0,.65) 0%,rgba(0,0,0,0) 70%)}
+.glow{position:absolute;pointer-events:none;opacity:0;transition:opacity .4s ease}
+#stage.lights .glow{opacity:1}
+#stage.lights-on .glow{animation:lightOn 1.1s ease-out both}
+#stage.lights-off .glow{animation:lightOff .6s ease-in both}
+#stage.lights-on #beam{animation:beamOn 1.1s ease-out both;transform-origin:0% 50%}
+#stage.lights-off #beam{animation:beamOff .6s ease-in both;transform-origin:0% 50%}
+@keyframes lightOn{0%{opacity:0}18%{opacity:.95}30%{opacity:.35}48%{opacity:1}62%{opacity:.8}100%{opacity:1}}
+@keyframes lightOff{0%{opacity:1}100%{opacity:0}}
+@keyframes beamOn{0%{opacity:0}100%{opacity:1}}
+@keyframes beamOff{0%{opacity:1}100%{opacity:0}}
+#lightBtn{transition:background .5s ease,color .5s ease}
+#beam{z-index:0;left:62%;top:74%;width:46%;height:30%;background:radial-gradient(ellipse closest-side at 50% 50%,rgba(255,240,200,.30) 0%,rgba(255,240,200,.12) 50%,rgba(255,240,200,0) 100%)}
+#hlL{z-index:2;left:38%;top:38%;width:26%;height:24%;background:radial-gradient(ellipse closest-side at 50% 50%,rgba(255,252,235,.9) 0%,rgba(255,242,205,.55) 30%,rgba(255,232,170,.18) 65%,rgba(255,232,170,0) 100%)}
+#hlR{z-index:2;left:89%;top:35%;width:14%;height:24%;background:radial-gradient(ellipse closest-side at 50% 50%,rgba(255,252,235,.9) 0%,rgba(255,242,205,.5) 30%,rgba(255,232,170,.18) 65%,rgba(255,232,170,0) 100%)}
+#arc{transition:stroke-dasharray .5s linear}
+
+/* derecha */
+#clock{padding:20px;display:flex;flex-direction:column;gap:4px}
+#time{font-size:72px;font-weight:600;line-height:1;letter-spacing:1px}
+.sep{height:1px;background:rgba(255,255,255,.1);margin:14px 0}
+.wx{display:flex;align-items:center;gap:14px}
+#temp{font-size:44px;font-weight:600;line-height:1}
+#conn{flex:1;min-height:0;padding:16px;display:flex;flex-direction:column;gap:12px;justify-content:flex-start;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px}
+.ico{width:40px;height:40px;border-radius:12px;background:#2f353b;display:flex;align-items:center;justify-content:center;color:#dfe5e9}
+.row b{display:block;font-size:14px;font-weight:600}
+.row span{font-size:14px}
+#cp{height:52px;border-radius:16px;background:#e8edf1;color:#1a1d21;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px}
+
+/* música compacta en el panel derecho */
+#conn .musicHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#conn .musicHead h2{font-size:17px;font-weight:600}
+#conn .musicBody{display:flex;align-items:center;gap:12px;min-height:78px}
+#art{width:82px;height:82px;flex:none;border-radius:14px;overflow:hidden;background:linear-gradient(145deg,#4a525a,#2a2f35);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#dfe5e9}
+#art img{width:100%;height:100%;object-fit:cover;display:none}
+#conn #mTitle{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+#conn #mArtist{font-size:13px;margin-top:4px;line-height:1.25;max-height:34px;overflow:hidden}
+#conn .sourceChip{font-size:11px;border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:4px 8px;color:#cbd2d8;white-space:nowrap;max-width:125px;overflow:hidden;text-overflow:ellipsis}
+#conn #bar{height:4px;border-radius:999px;background:#3a4047;overflow:hidden}
+#conn .times{display:flex;justify-content:space-between;font-size:11px;margin-top:5px}
+#conn .ctl{display:flex;align-items:center;justify-content:center;gap:24px;margin-top:auto}
+#conn .ctl .sm{width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:#e8edf1}
+#conn #play{width:48px;height:48px;border-radius:999px;background:#e8edf1;color:#1a1d21;display:flex;align-items:center;justify-content:center}
+#conn #needs{height:34px;border-radius:10px;background:#e8edf1;color:#1a1d21;font-size:12px;font-weight:600;padding:0 10px;align-self:stretch}
+#conn #musicHint{font-size:12px;color:#aab2b9;line-height:1.3}
+#mapProvider{pointer-events:auto;cursor:pointer}
+/* Tarjetas principales de música y radio */
+#musicCard{flex:1;min-height:0;padding:18px;display:flex;flex-direction:column;gap:18px;justify-content:space-between;overflow:hidden}
+#musicCard .musicHead,#radioCard .radioHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#musicCard .musicHead h2,#radioCard .radioHead h2{font-size:19px;font-weight:600}
+#musicCard .musicBody{display:flex;align-items:center;gap:16px;min-height:100px}
+#musicCard #art{width:112px;height:112px;flex:none;border-radius:18px;overflow:hidden;background:linear-gradient(145deg,#4a525a,#2a2f35);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#dfe5e9}
+#musicCard #mArtwork{width:100%;height:100%;object-fit:cover;display:none}
+#musicCard #mTitle{font-size:21px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#musicCard #mArtist{font-size:16px;margin-top:6px;line-height:1.3;max-height:44px;overflow:hidden}
+#musicCard #musicHint{font-size:13px;color:#aab2b9;line-height:1.35}
+#musicCard #needs{height:38px;border-radius:12px;background:#e8edf1;color:#1a1d21;font-size:13px;font-weight:600;padding:0 14px;align-self:flex-start}
+#musicCard #bar{height:5px;border-radius:999px;background:#3a4047;overflow:hidden}
+#musicCard .times{display:flex;justify-content:space-between;font-size:12px;margin-top:6px}
+#musicCard .ctl{display:flex;align-items:center;justify-content:center;gap:28px}
+#musicCard .ctl .sm{width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:#e8edf1}
+#musicCard #play{width:58px;height:58px;border-radius:999px;background:#e8edf1;color:#1a1d21;display:flex;align-items:center;justify-content:center}
+.wideAction{width:100%;min-height:44px;padding:0 12px;border-radius:14px;background:#e8edf1;color:#1a1d21;font-size:14px;font-weight:600}
+#radioCard{flex:1;min-height:0;padding:16px;display:flex;flex-direction:column;gap:13px;overflow:hidden}
+#radioCard .sourceChip{font-size:11px;border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:4px 8px;color:#cbd2d8}
+#radioCard .radioFrequency{font-size:38px;font-weight:600;letter-spacing:1px;text-align:center;padding:8px 0 0}
+#radioCard .radioSub{text-align:center;font-size:13px;min-height:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#radioCard .radioTune{display:flex;justify-content:center;gap:16px}
+#radioCard .radioTune button{width:48px;height:40px;border-radius:13px;background:#30363c;font-size:24px;font-weight:500}
+#radioCard .radioPresets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#radioCard .radioPresets button{height:36px;border-radius:11px;background:#30363c;border:1px solid rgba(255,255,255,.08);font-size:13px}
+#radioCard .radioPresets button.active{background:#e8edf1;color:#1a1d21}
+#radioCard .radioNote{font-size:11px;line-height:1.3}
+#radioCard.inactive .radioFrequency{opacity:.55}
+#radioCard .radioTune button.pressing{transform:scale(.94);background:#3a4148}
+/* dock */
+#dock{height:84px;flex:none;border-radius:28px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,#2a2f35,#1a1d21);display:flex;align-items:center;justify-content:space-around;padding:0 12px}
+.db{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:80px;height:68px;color:#d4dade;font-size:12px;font-weight:500}
+.db .ic{width:48px;height:48px;border-radius:14px;overflow:hidden;background:linear-gradient(160deg,#3d444b,#262b30);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center}
+.db .ic img{display:none;width:100%;height:100%;object-fit:cover}
+.db .ic b{font-size:26px;font-weight:300;color:#9aa4ab}
+.db .lb{max-width:96px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* mini mapa dinámico */
+#map{width:100%;flex:1;min-height:180px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.1);background:#252a2f;position:relative;cursor:pointer}
+.mapOverlay{position:absolute;z-index:500;right:8px;top:8px;padding:5px 8px;border-radius:999px;background:rgba(16,18,20,.78);border:1px solid rgba(255,255,255,.16);font-size:10px;color:#e8edf1;pointer-events:none}
+#mapPulse{position:absolute;z-index:450;width:18px;height:18px;border-radius:50%;border:2px solid rgba(232,237,241,.9);box-shadow:0 0 0 7px rgba(232,237,241,.12);pointer-events:none;display:none}
+#gps .btns button.mapActive{background:#e8edf1;color:#1a1d21;border-color:#fff}
+#drawerTransition{display:none!important}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}
+}
+.safe *{animation:none!important;transition:none!important}
+</style>
+
+<script>if(location.search.indexOf('safe=1')>-1)document.documentElement.className='safe';</script>
+</head>
+<body>
+<div id="stage">
+
+  <!-- Barra lateral -->
+  <nav id="side" aria-label="Principal">
+    <button class="nb on" aria-label="Inicio">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg><span>Inicio</span>
+    </button>
+    <button class="nb" data-key="stereogps" aria-label="GPS del equipo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 17-7-4-7 4z"/></svg><span>GPS</span>
+    </button>
+    <button class="nb" data-key="phone" aria-label="Teléfono">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg><span>Teléfono</span>
+    </button>
+    <button class="nb" data-key="radio" aria-label="Radio">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8l11-4"/><circle cx="9" cy="14" r="2.5"/><path d="M15 12h3M15 16h3"/></svg><span>Radio</span>
+    </button>
+    <button class="nb" data-act="drawer" aria-label="Aplicaciones">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg><span>Apps</span>
+    </button>
+    <button class="nb" data-key="settings" aria-label="Ajustes">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></svg><span>Ajustes</span>
+    </button>
+  </nav>
+
+  <div id="main">
+    <div id="row">
+
+      <!-- Izquierda: GPS + música -->
+      <div id="colL">
+        <section id="musicCard" class="card" aria-label="Música">
+          <div class="musicHead"><h2>Música</h2><span class="sourceChip" id="mSource">Sin reproducción</span></div>
+          <div class="musicBody">
+            <div id="art" aria-label="Carátula actual">
+              <img id="mArtwork" alt="Carátula de la canción">
+              <svg id="mDefaultArt" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>
+            </div>
+            <div style="min-width:0;flex:1">
+              <div id="mTitle">Sin reproducción</div>
+              <div id="mArtist" class="sub">Spotify, Bluetooth o estéreo</div>
+            </div>
+          </div>
+          <div id="musicHint">La carátula y los datos cambian según la fuente activa.</div>
+          <button id="needs">Activar acceso a la música</button>
+          <div>
+            <div id="bar"><div id="barFill"></div></div>
+            <div class="times sub"><span id="mPos">0:00</span><span id="mDur">0:00</span></div>
+          </div>
+          <div class="ctl">
+            <button class="sm" id="prev" aria-label="Anterior"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6v12M18 6l-9 6 9 6z"/></svg></button>
+            <button id="play" aria-label="Reproducir o pausar"><svg id="icPause" class="hide" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg><svg id="icPlay" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l11 7-11 7z"/></svg></button>
+            <button class="sm" id="next" aria-label="Siguiente"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M18 6v12M6 6l9 6-9 6z"/></svg></button>
+          </div>
+          <button id="openMusic" class="wideAction">Abrir aplicación de música</button>
+        </section>
+
+
+      </div>
+
+      <!-- Centro: camioneta + velocidad -->
+      <section id="center" class="card" aria-label="Vehículo">
+        <div class="top">
+                    <button id="lightBtn" aria-pressed="false">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5a7 7 0 0 0 0 14"/><path d="M13 8l8 2M13 12h8M13 16l8-2"/></svg>
+            <span id="lightLabel">Luces bajas apagadas</span>
+          </button>
+        </div>
+
+        <div id="truckWrap">
+          <div class="floor"></div>
+          <div id="beam" class="glow" aria-hidden="true"></div>
+          <img id="truck" src="truck.png" alt="Ford Ranger gris">
+          <div id="hlL" class="glow" aria-hidden="true"></div>
+          <div id="hlR" class="glow" aria-hidden="true"></div>
+        </div>
+
+        <svg viewBox="0 0 360 196" style="width:400px;max-width:100%;height:auto" role="img" aria-label="Velocímetro en kilómetros por hora">
+          <path d="M40 170 A140 140 0 0 1 320 170" stroke="#31373d" stroke-width="8" fill="none"/>
+          <path id="arc" d="M40 170 A140 140 0 0 1 320 170" stroke="#e8edf1" stroke-width="8" fill="none" stroke-dasharray="0 440"/>
+          <path id="ticks" stroke="#6a727a" stroke-width="1.5" fill="none"/>
+          <text x="74" y="175" text-anchor="middle" font-size="12" fill="#aab2b9">0</text>
+          <text x="105" y="99" text-anchor="middle" font-size="12" fill="#aab2b9">50</text>
+          <text x="180" y="68" text-anchor="middle" font-size="12" fill="#aab2b9">100</text>
+          <text x="255" y="99" text-anchor="middle" font-size="12" fill="#aab2b9">150</text>
+          <text x="286" y="175" text-anchor="middle" font-size="12" fill="#aab2b9">200</text>
+          <text id="speed" class="num" x="180" y="156" text-anchor="middle" font-size="78" font-weight="600" fill="#f2f5f7">0</text>
+          <text x="180" y="188" text-anchor="middle" font-size="20" font-weight="500" fill="#c4cbd1" letter-spacing="2">km/h</text>
+        </svg>
+      </section>
+
+      <!-- Derecha: hora/clima + conexiones -->
+      <div id="colR">
+        <section id="clock" class="card" aria-label="Hora y clima">
+          <div id="greet" class="sub" style="font-size:15px">Hola</div>
+          <div id="time" class="num">--:--</div>
+          <div id="date" class="sub" style="font-size:15px">&nbsp;</div>
+          <div class="sep"></div>
+          <div class="wx">
+            <div id="wIcon" style="width:36px;height:36px"></div>
+            <div id="temp" class="num">—</div>
+            <div style="font-size:14px;line-height:1.3"><div id="wText" style="font-weight:600">Sin datos</div><div id="wMinMax" class="sub">Falta internet</div></div>
+          </div>
+        </section>
+
+        <section id="radioCard" class="card" aria-label="Radio">
+          <div class="radioHead"><h2>Radio</h2><span class="sourceChip" id="radioChip">FM</span></div>
+          <div class="radioFrequency"><span id="radioFreq">--.-</span></div>
+          <div class="radioSub sub" id="radioStation">Esperando a la radio…</div>
+          <div class="radioTune">
+            <button id="radioDown" aria-label="Emisora anterior">‹</button>
+            <button id="radioUp" aria-label="Emisora siguiente">›</button>
+          </div>
+          <div class="radioPresets" aria-label="Emisoras guardadas">
+            <button data-freq="88.3">88.3</button><button data-freq="90.5">90.5</button><button data-freq="94.7">94.7</button>
+            <button data-freq="98.3">98.3</button><button data-freq="100.1">100.1</button><button data-freq="103.1">103.1</button>
+          </div>
+          <div class="radioNote sub">Mantené apretada una emisora guardada para reemplazarla por la que está sonando. ‹ › buscan la emisora anterior / siguiente; mantenelos apretados para mover la frecuencia de a un paso. Funciona con la radio activa. Mantené apretado "Luces" para más herramientas.</div>
+          <button id="openRadio" class="wideAction">Abrir radio del estéreo</button>
+        </section>
+      </div>
+    </div>
+
+    <!-- Barra inferior de aplicaciones -->
+    <nav id="dock" aria-label="Aplicaciones">
+      <button class="db" data-key="dock_waze" data-label="Waze"><span class="ic"><img alt=""><b>+</b></span><span class="lb">Waze</span></button>
+      <button class="db" data-key="dock_spotify" data-label="Spotify"><span class="ic"><img alt=""><b>+</b></span><span class="lb">Spotify</span></button>
+      <button class="db" data-key="dock_carplay" data-label="Agregar app"><span class="ic"><img alt=""><b>+</b></span><span class="lb">Agregar app</span></button>
+      <button class="db" data-key="dock_radio" data-label="Radio"><span class="ic"><img alt=""><b>+</b></span><span class="lb">Radio</span></button>
+      <button class="db" data-key="dock_youtube" data-label="YouTube"><span class="ic"><img alt=""><b>+</b></span><span class="lb">YouTube</span></button>
+      <button class="db" data-key="dock_flow" data-label="Flow"><span class="ic"><img alt=""><b>+</b></span><span class="lb">Flow</span></button>
+    </nav>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var A = window.Android || null;
+  function call(fn){
+    var args = Array.prototype.slice.call(arguments, 1);
+    if (A && typeof A[fn] === 'function') { A[fn].apply(A, args); }
+    else { console.log('Android.' + fn, args); }
+  }
+  var $ = function(id){ return document.getElementById(id); };
+  var stage = $('stage');
+
+  /* ---- escala a la pantalla ---- */
+  function fit(){
+    var s = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    stage.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit); fit();
+
+  /* ---- toques y pulsación larga ---- */
+  function bind(el, onTap, onHold){
+    var t = null, held = false, sx = 0, sy = 0, vis = null;
+    function release(){ clearTimeout(t); clearTimeout(vis); el.classList.remove('pressing'); }
+    function fireHold(){
+      if (held) return;
+      held = true; release();
+      if (navigator.vibrate) { try { navigator.vibrate(30); } catch(e){} }
+      onHold();
+    }
+    el.addEventListener('pointerdown', function(e){
+      held = false; sx = e.clientX; sy = e.clientY;
+      if (onHold){
+        vis = setTimeout(function(){ el.classList.add('pressing'); }, 180);
+        t = setTimeout(fireHold, 600);
+      }
+    });
+    el.addEventListener('pointermove', function(e){
+      if (Math.abs(e.clientX - sx) > 24 || Math.abs(e.clientY - sy) > 24) release();
+    });
+    el.addEventListener('pointerup', release);
+    el.addEventListener('pointerleave', release);
+    el.addEventListener('pointercancel', release);
+    el.addEventListener('click', function(){ if (held) { held = false; return; } onTap(); });
+    // En algunos equipos la pulsación larga llega como "menú contextual": también cuenta.
+    el.addEventListener('contextmenu', function(e){ e.preventDefault(); if (onHold) fireHold(); });
+  }
+
+  /* ---- transición interfaz -> app ---- */
+  var ov = document.createElement('div');
+  ov.id = 'launchOv';
+  ov.innerHTML = '<div class="li"></div>';
+  stage.appendChild(ov);
+  var ovTimer = null;
+  function stageRect(el){
+    var r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), s = sr.width / 1280;
+    return {x:(r.left - sr.left) / s, y:(r.top - sr.top) / s, w:r.width / s, h:r.height / s};
+  }
+  function iconOf(el){
+    var img = el.querySelector('img');
+    if (img && img.getAttribute('src') && img.style.display !== 'none') return img.outerHTML;
+    var sv = el.querySelector('svg');
+    if (sv && !sv.getAttribute('viewBox').match(/^0 0 308/)) return sv.outerHTML;
+    return '';
+  }
+  function labelOf(el){
+    var lb = el.querySelector('.lb') || el.querySelector('span');
+    return ((lb || el).textContent || '').trim();
+  }
+  /* Anima desde el botón tocado hasta pantalla completa y recién entonces abre la app. */
+  function launchFrom(el, go){
+    clearTimeout(ovTimer);
+    var r = stageRect(el);
+    ov.className = '';
+    ov.style.transition = 'none';
+    ov.style.left = r.x + 'px'; ov.style.top = r.y + 'px';
+    ov.style.width = r.w + 'px'; ov.style.height = r.h + 'px';
+    ov.style.borderRadius = '18px';
+    ov.firstChild.innerHTML = iconOf(el) + '<span>' + labelOf(el) + '</span>';
+    void ov.offsetWidth;
+    ov.style.transition = '';
+    ov.className = 'go';
+    ov.style.left = '0px'; ov.style.top = '0px';
+    ov.style.width = '1280px'; ov.style.height = '720px';
+    ov.style.borderRadius = '0px';
+    ovTimer = setTimeout(function(){
+      go();
+      if (!A) ovTimer = setTimeout(window.launchDone, 1200); // sin Android (prueba en navegador)
+    }, 230);
+  }
+  /* Regreso: la interfaz aparece con un zoom suave. También limpia si la app no se abrió. */
+  window.drawerDone = function(){
+    var tr = $('drawerTransition');
+    if (tr) tr.classList.remove('go');
+  };
+  window.launchDone = function(){
+    clearTimeout(ovTimer);
+    if (!ov.classList.contains('go')) return;
+    ov.className = 'out';
+    stage.classList.add('back');
+    setTimeout(function(){ stage.classList.remove('back'); }, 460);
+    setTimeout(function(){ if (ov.className === 'out') ov.className = ''; }, 420);
+  };
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-key]'), function(b){
+    var k = b.getAttribute('data-key');
+    bind(b, function(){ launchFrom(b, function(){ call('open', k); }); }, function(){ call('pick', k); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-dest]'), function(b){
+    var d = b.getAttribute('data-dest');
+    bind(b, function(){ launchFrom(b, function(){ call('navigate', d); }); }, function(){ call('setAddress', d); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-act]'), function(b){
+    var a = b.getAttribute('data-act');
+    bind(b, function(){
+      if (a === 'drawer'){
+        // Abrir directamente el cajón nativo. Una capa de transición a pantalla
+        // completa podía quedar activa al cerrar el diálogo y aparentar un bloqueo.
+        call('drawer');
+      } else {
+        call(a);
+      }
+    });
+  });
+  bind($('play'), function(){ call('media', 'toggle'); });
+  bind($('prev'), function(){ call('media', 'prev'); });
+  bind($('next'), function(){ call('media', 'next'); });
+  bind($('needs'), function(){ call('notifAccess'); });
+
+  /* ---- hora, fecha, saludo ---- */
+  function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+  function tickClock(){
+    var d = new Date(), h = d.getHours();
+    $('time').textContent = d.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit', hour12:false});
+    $('date').textContent = cap(d.toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long'}));
+    $('greet').textContent = (h < 6 || h >= 20) ? 'Buenas noches' : (h < 13 ? 'Buenos días' : 'Buenas tardes');
+  }
+  tickClock(); setInterval(tickClock, 10000);
+
+  /* ---- velocímetro ---- */
+  var CIRC = Math.PI * 140;
+  (function(){
+    var d = '';
+    for (var i = 0; i <= 40; i++){
+      var a = Math.PI + (i * 5) / 200 * Math.PI;
+      var r1 = (i % 2 === 0) ? 118 : 123, r2 = 129;
+      d += 'M' + (180 + r1 * Math.cos(a)).toFixed(1) + ' ' + (170 + r1 * Math.sin(a)).toFixed(1) +
+           ' L' + (180 + r2 * Math.cos(a)).toFixed(1) + ' ' + (170 + r2 * Math.sin(a)).toFixed(1) + ' ';
+    }
+    $('ticks').setAttribute('d', d);
+  })();
+  window.setApps = function(d){
+    Array.prototype.forEach.call(document.querySelectorAll('[data-key]'), function(b){
+      var x = d[b.getAttribute('data-key')] || {};
+      if (b.classList.contains('db')){
+        var img = b.querySelector('img'), plus = b.querySelector('b'), lb = b.querySelector('.lb');
+        if (x.icon){
+          img.src = 'data:image/png;base64,' + x.icon;
+          img.style.display = 'block'; plus.style.display = 'none';
+          lb.textContent = x.label || b.getAttribute('data-label');
+        } else {
+          img.style.display = 'none'; plus.style.display = 'block';
+          lb.textContent = b.getAttribute('data-label');
+        }
+        return;
+      }
+      if (b.tagName !== 'BUTTON') return; // el mapa decorativo no cambia de aspecto
+      if (b.__orig === undefined) b.__orig = b.innerHTML;
+      if (x.icon && x.custom){
+        var im = '<img class="ai" alt="" src="data:image/png;base64,' + x.icon + '">';
+        var name = String(x.label || '').replace(/</g, '&lt;');
+        if (b.classList.contains('nb')) b.innerHTML = im + '<span>' + name + '</span>';
+        else b.innerHTML = im + name;
+      } else {
+        b.innerHTML = b.__orig;
+      }
+    });
+  };
+  window.setSpeed = function(v){
+    v = Math.max(0, Math.min(200, Number(v) || 0));
+    $('speed').textContent = String(Math.round(v));
+    $('arc').setAttribute('stroke-dasharray', (v / 200 * CIRC).toFixed(1) + ' ' + CIRC.toFixed(1));
+  };
+
+  /* ---- luces bajas ---- */
+  var lightsState = null, lightsTimer = null;
+  window.setLights = function(on){
+    on = !!on;
+    if (lightsState !== on){
+      var first = lightsState === null;
+      lightsState = on;
+      stage.classList.remove('lights-on', 'lights-off');
+      if (!first){
+        void stage.offsetWidth;
+        stage.classList.add(on ? 'lights-on' : 'lights-off');
+        clearTimeout(lightsTimer);
+        lightsTimer = setTimeout(function(){ stage.classList.remove('lights-on', 'lights-off'); }, 1200);
+      }
+    }
+    stage.classList.toggle('lights', on);
+    $('lightBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
+    $('lightLabel').textContent = on ? 'Luces bajas encendidas' : 'Luces bajas apagadas';
+  };
+
+  /* ---- música ---- */
+  function fmt(ms){
+    var s = Math.max(0, Math.floor(ms / 1000));
+    return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+  }
+  var radioMode = true;
+  var realRadio = false;   // true cuando el estéreo ya informó la frecuencia (ver setRadioFreq)
+  bind($('art'), function(){ if (radioMode) launchFrom($('art'), function(){ call('open', 'music'); }); });
+  window.setMedia = function(m){
+    var needs = $('needs');
+    if (!m || m.idle){
+      needs.style.display = (m && m.needsAccess) ? 'block' : 'none';
+      radioMode = true;
+      $('mTitle').textContent = 'Música del estéreo';
+      $('mArtist').textContent = 'Tocá ▶ para reproducir';
+      $('mArtwork').style.display='none'; $('mArtwork').removeAttribute('src'); $('mDefaultArt').style.display='block';
+      $('mSource').textContent = 'Estéreo';
+      $('barFill').style.width = '0%'; $('mPos').textContent = '0:00'; $('mDur').textContent = '0:00';
+      $('icPause').classList.add('hide'); $('icPlay').classList.remove('hide');
+      return;
+    }
+    if (m.needsAccess){
+      needs.style.display = 'block';
+      radioMode = true;
+      $('mTitle').textContent = 'Radio';
+      $('mArtist').textContent = 'Activá el acceso para ver Spotify o Bluetooth';
+      $('mArtwork').style.display='none'; $('mArtwork').removeAttribute('src'); $('mDefaultArt').style.display='block';
+      $('mSource').textContent = 'Radio';
+      return;
+    }
+    needs.style.display = 'none';
+    radioMode = false;
+    /* Si ya llegó la frecuencia real de la radio, la sesión multimedia no la pisa. */
+    if (m.isRadio && !realRadio) { $('radioFreq').textContent = m.title || 'Radio'; $('radioStation').textContent = m.artist || m.source || ''; }
+    $('mTitle').textContent = m.title || 'Sin título';
+    $('mArtist').textContent = m.artist || '';
+    $('mSource').textContent = m.source || 'Música';
+    if (Object.prototype.hasOwnProperty.call(m, 'artwork')) {
+      if (m.artwork) {
+        if ($('mArtwork').getAttribute('src') !== m.artwork) $('mArtwork').src = m.artwork;
+        $('mArtwork').style.display='block'; $('mDefaultArt').style.display='none';
+      } else {
+        $('mArtwork').style.display='none';
+        if ($('mArtwork').hasAttribute('src')) $('mArtwork').removeAttribute('src');
+        $('mDefaultArt').style.display='block';
+      }
+    }
+    var pct = m.dur > 0 ? Math.min(100, m.pos / m.dur * 100) : 0;
+    $('barFill').style.width = pct.toFixed(1) + '%';
+    $('mPos').textContent = fmt(m.pos); $('mDur').textContent = fmt(m.dur);
+    $('icPause').classList.toggle('hide', !m.playing);
+    $('icPlay').classList.toggle('hide', !!m.playing);
+  };
+  window.setMedia({idle:true});
+
+  /* ---- conexiones ---- */
+  // El panel de conexiones fue reemplazado por Música; se conserva el puente nativo por compatibilidad.
+  window.setStatus = function(s){};
+
+
+  /* ---- Radio real: la frecuencia y la banda las informa el estéreo (MainActivity.pushRadio) ----
+     raw FM = MHz x100 (8830 = 88.3) · raw AM = kHz. Bandas: 0-2 FM1-3, 3-5 AM1-3, 6-8 FM local 1-3. */
+  function bandInfo(b){
+    if (b >= 0 && b <= 2) return {name:'FM' + (b + 1), am:false};
+    if (b >= 6 && b <= 8) return {name:'FM' + (b - 5), am:false};
+    if (b >= 3 && b <= 5) return {name:'AM' + (b - 2), am:true};
+    return null;
+  }
+  window.setRadioFreq = function(raw, band, active){
+    var bi = bandInfo(band);
+    raw = Number(raw);
+    if (!bi || !(raw > 0)) return;
+    if (bi.am ? (raw < 450 || raw > 1800) : (raw < 6000 || raw > 10900)) return;   // valor fuera de rango: se ignora
+    realRadio = true; curRaw = raw; curBand = band; curActive = !!active;
+    var txt = bi.am ? ('AM ' + raw) : ('FM ' + (raw % 10 === 0 ? (raw / 100).toFixed(1) : (raw / 100).toFixed(2)));
+    $('radioFreq').textContent = txt;
+    $('radioChip').textContent = bi.name;
+    $('radioStation').textContent = active ? (bi.am ? 'Sintonizada · kHz' : 'Sintonizada · MHz') : 'Última sintonía · radio no activa';
+    $('radioCard').classList.toggle('inactive', !active);
+    Array.prototype.forEach.call(document.querySelectorAll('#radioCard [data-freq]'), function(b){
+      b.classList.toggle('active', !bi.am && Math.round(Number(b.getAttribute('data-freq')) * 100) === raw);
+    });
+  };
+  /* Presets: tocar = sintonizar (activa la radio en segundo plano si hace falta);
+     mantener apretado = guardar la frecuencia que suena ahora en ese botón. */
+  var curRaw = 0, curBand = -1, curActive = false;
+  var presetBtns = Array.prototype.slice.call(document.querySelectorAll('#radioCard [data-freq]'));
+  function fmtFm(raw){ return (raw / 100).toFixed(raw % 10 === 0 ? 1 : 2); }
+  (function loadPresets(){
+    try {
+      var saved = JSON.parse(localStorage.getItem('radioPresets') || '[]');
+      presetBtns.forEach(function(b, i){
+        if (saved[i] > 6000 && saved[i] < 10900) { b.setAttribute('data-freq', fmtFm(saved[i])); b.textContent = fmtFm(saved[i]); }
+      });
+    } catch(e){}
+  })();
+  function savePresets(){
+    try {
+      localStorage.setItem('radioPresets', JSON.stringify(presetBtns.map(function(b){ return Math.round(Number(b.getAttribute('data-freq')) * 100); })));
+    } catch(e){}
+  }
+  var flashT = null;
+  function flashStation(msg){
+    var el = $('radioStation'), keep = el.textContent;
+    el.textContent = msg; clearTimeout(flashT);
+    flashT = setTimeout(function(){ el.textContent = keep; }, 2200);
+  }
+  presetBtns.forEach(function(b, i){
+    bind(b, function(){
+      var sent = false;
+      if (A && typeof A.radioTune === 'function') {
+        try { sent = !!A.radioTune(Math.round(Number(b.getAttribute('data-freq')) * 100)); } catch(e){}
+      }
+      if (!sent) call('open', 'radio');
+    }, function(){
+      var bi = bandInfo(curBand);
+      if (!curActive || !bi || bi.am || !(curRaw > 6000)) { flashStation('Poné la radio en FM para guardar la emisora'); return; }
+      b.setAttribute('data-freq', fmtFm(curRaw)); b.textContent = fmtFm(curRaw);
+      savePresets();
+      flashStation('Guardada ' + fmtFm(curRaw) + ' en el botón ' + (i + 1));
+      b.classList.add('active');
+    });
+  });
+  /* ‹ › = emisora anterior / siguiente · pulsación larga = un paso de frecuencia */
+  bind($('radioDown'), function(){ call('radio','down'); }, function(){ call('radio','stepdown'); });
+  bind($('radioUp'),   function(){ call('radio','up'); },   function(){ call('radio','stepup'); });
+  bind($('openRadio'),function(){ call('open','radio'); });
+  bind($('openMusic'),function(){ call('open','music'); });
+  window.setLocation = function(lat, lon){
+    /* El GPS sigue alimentando velocidad y clima; se quitó el minimapa para ahorrar recursos. */
+    if (Date.now() - lastWx > 30 * 60 * 1000){ lastWx = Date.now(); loadWeather(lat, lon); }
+  };
+
+  /* ---- clima (Open-Meteo, solo con internet y ubicación) ---- */
+  var SUN  = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#dfe5e9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8"/></svg>';
+  var MOON = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#dfe5e9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>';
+  var CLOUD= '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#dfe5e9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 10.5 3.75 3.75 0 0 1 17.5 18z"/></svg>';
+  var RAIN = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#dfe5e9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 7.5 3.75 3.75 0 0 1 17.5 15z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/></svg>';
+  var WX = {0:'Despejado',1:'Mayormente despejado',2:'Parcialmente nublado',3:'Nublado',45:'Niebla',48:'Niebla',
+    51:'Llovizna',53:'Llovizna',55:'Llovizna',56:'Llovizna helada',57:'Llovizna helada',61:'Lluvia',63:'Lluvia',65:'Lluvia fuerte',
+    66:'Lluvia helada',67:'Lluvia helada',71:'Nieve',73:'Nieve',75:'Nieve',77:'Nieve',80:'Chubascos',81:'Chubascos',82:'Chubascos fuertes',
+    85:'Nevadas',86:'Nevadas',95:'Tormenta',96:'Tormenta',99:'Tormenta'};
+  function iconFor(code, day){
+    if (code === 0 || code === 1) return day ? SUN : MOON;
+    if (code === 2 || code === 3 || code === 45 || code === 48) return CLOUD;
+    return RAIN;
+  }
+  var lastWx = 0;
+  function loadWeather(lat, lon){
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
+      '&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1';
+    fetch(url).then(function(r){ return r.json(); }).then(function(j){
+      var c = j.current, d = j.daily;
+      $('temp').textContent = Math.round(c.temperature_2m) + '°';
+      $('wText').textContent = WX[c.weather_code] || 'Clima';
+      $('wMinMax').textContent = 'Mín ' + Math.round(d.temperature_2m_min[0]) + '° · Máx ' + Math.round(d.temperature_2m_max[0]) + '°';
+      $('wIcon').innerHTML = iconFor(c.weather_code, c.is_day === 1);
+      lastWx = Date.now();
+    }).catch(function(){ lastWx = Date.now() - 25 * 60 * 1000; });
+  }
+  $('wIcon').innerHTML = CLOUD;
+
+  window.setSpeed(0);
+  window.setLights(false);
+  bind($('lightBtn'), function(){}, function(){ call('tools'); });
+  window.setStatus({wifi:false, bt:false});
+})();
+</script>
+</body>
+</html>
